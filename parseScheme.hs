@@ -108,9 +108,9 @@ parseRatio = do
     y <- many1 digit
     return $ Ratio ((read x) % (read y))
 
-toDouble :: LispVal -> Double
-toDouble(Float f) = realToFrac f
-toDouble(Number n) = fromIntegral n
+lispToDouble :: LispVal -> Double
+lispToDouble(Float f) = realToFrac f
+lispToDouble(Number n) = fromIntegral n
 
 parseComplex :: Parser LispVal
 parseComplex = do 
@@ -118,7 +118,7 @@ parseComplex = do
     char '+' 
     y <- (try parseFloat <|> parseNumber)
     char 'i' 
-    return $ Complex (toDouble x :+ toDouble y)
+    return $ Complex (lispToDouble x :+ lispToDouble y)
 
 parseList :: Parser LispVal
 parseList = liftM List $ sepBy parseExpr spaces
