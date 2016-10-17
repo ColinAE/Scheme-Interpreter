@@ -5,13 +5,6 @@ import Control.Monad.Error
 import LispTypes
 import Utility
 
-instance Show LispError where show = showError
-instance Error LispError where
-     noMsg = Default "An error has occurred"
-     strMsg = Default
-
-type ThrowsError = Either LispError
-
 data LispError = NumArgs Integer [LispVal]
                | TypeMismatch String LispVal
                | Parserr ParseError
@@ -19,6 +12,13 @@ data LispError = NumArgs Integer [LispVal]
                | NotFunction String String
                | UnboundVar String String
                | Default String
+
+instance Show LispError where show = showError
+instance Error LispError where
+     noMsg = Default "An error has occurred"
+     strMsg = Default
+
+type ThrowsError = Either LispError
 
 
 showError :: LispError -> String
