@@ -10,13 +10,16 @@ eval val@(String _) = return val
 eval val@(Number _) = return val
 eval val@(Bool _) = return val
 eval (List [Atom "quote", val]) = return val
-eval (List [Atom "if", pred, conseq, alt]) = 
-     do result <- eval pred
-        case result of
-             Bool False -> eval alt
-             otherwise  -> eval conseq
+eval (List [Atom "if", predicate, conseq, alt]) = evalIf predicate, conseq, alt
 eval (List (Atom func : args)) = mapM eval args >>= apply func
 eval badForm = throwError $ BadSpecialForm "Unrecognized special form" badForm
+
+evalIf :: LispVal -> LispVal -> LispVal -> ThrowsError LispVal
+evalIf predicate conseq alt = do result <- eval predicate
+                                                case result of
+                                                    Bool False -> eval alt
+                                                    Bool True  -> eval conseq
+                                                    _  -> throwError $ TypeMismatch "boolean" predicate
 
 numericBinop :: (Integer -> Integer -> Integer) -> [LispVal] -> ThrowsError LispVal
 numericBinop op           []  = throwError $ NumArgs 2 []
@@ -106,21 +109,27 @@ eqv [(Number arg1), (Number arg2)]         = return $ Bool $ arg1 == arg2
 eqv [(String arg1), (String arg2)]         = return $ Bool $ arg1 == arg2
 eqv [(Atom arg1), (Atom arg2)]             = return $ Bool $ arg1 == arg2
 eqv [(DottedList xs x), (DottedList ys y)] = eqv [List $ xs ++ [x], List $ ys ++ [y]]
-eqv [(List arg1), (List arg2)]             = return $ Bool $ (length arg1 == length arg2) && 
-                                                             (all eqvPair $ zip arg1 arg2)
-     where eqvPair (x1, x2) = case eqv [x1, x2] of
-                                Left err -> False
-                                Right (Bool val) -> val
+eqv [one@(List _), two@(List _)]             = eqList eqv [one, two]
 eqv [_, _]                                 = return $ Bool False
 eqv badArgList                             = throwError $ NumArgs 2 badArgList
 
 equal :: [LispVal] -> ThrowsError LispVal
+equal [one@(List _), two@(List _)] = eqList equal [one, two]
+equal [(DottedList x xs), (DottedList y ys)] = equal [List (xs ++ [x]), List (yes ++ [y])]
 equal [arg1, arg2] = do
       primitiveEquals <- liftM or $ mapM (unpackEquals arg1 arg2) 
                          [AnyUnpacker unpackNum, AnyUnpacker unpackStr, AnyUnpacker unpackBool]
       eqvEquals <- eqv [arg1, arg2]
       return $ Bool $ (primitiveEquals || let (Bool x) = eqvEquals in x)
 equal badArgList = throwError $ NumArgs 2 badArgList
+
+-- List equality checker that takes either 'equality' or 'eqv' as the element-wise equality checker.
+eqList :: ([LispVal] -> ThrowsError LispVal) -> [LispVal] -> ThrowsError LispVal
+eqList eqFunc [(List arg1), (List arg2)] = return $ Bool $ (length arg1 == length arg2) && 
+                                                     (all eqPair $ zip arg1 arg2)
+        where eqPair (x1, x2) = case eqFunc [x1, x2] of
+                                    Left err         -> False
+                                    Right (Bool val) -> val
 
 primitiveOps :: [(String, [LispVal] -> ThrowsError LispVal)]
 primitiveOps = [("+", numericBinop (+)),
