@@ -29,3 +29,13 @@ module REPL where
 
 	runREPL :: IO ()
 	runREPL = nullEnv >>= until_ (== "quit") (prompt "C-Scheme> ") evalPrint
+
+
+	import Data.IORef
+
+	type Env = IORef [(String, IORef LispVal)]
+
+	nullEnv :: IO Env
+	nullEnv = newIORef []
+
+	

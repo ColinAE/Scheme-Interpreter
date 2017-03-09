@@ -133,6 +133,14 @@ module EvaluateScheme where
             where eqPair (x1, x2) = case eqFunc [x1, x2] of
                                         Left err         -> False
                                         Right (Bool val) -> val
+
+    noLispBool :: [LispVal] -> ThrowsError LispVal
+    notLispBool [Bool boolean] = return $ Bool $ not boolean
+    notLispBool _ = return $ Bool False
+
+    isBool :: [Lispval] -> ThrowsError LispVal
+    isBool [Bool boolean] = return $ Bool True
+    isBool _ return $ Bool False
     
     primitiveOps :: [(String, [LispVal] -> ThrowsError LispVal)]
     primitiveOps = [("+", numericBinop (+)),
@@ -142,6 +150,7 @@ module EvaluateScheme where
                     ("mod", numericBinop mod),
                     ("quotient", numericBinop quot),
                     ("remainder", numericBinop rem),
+                    ("boolean?", isBool),
                     ("=", numBoolBinop (==)),
                     ("<", numBoolBinop (<)),
                     (">", numBoolBinop (>)),
@@ -160,7 +169,8 @@ module EvaluateScheme where
                     ("cons", cons),
                     ("eq?", eqv),
                     ("eqv?", eqv),
-                    ("equal?", equal){--,
+                    ("equal?", equal),
+                    {--,
                     ("symbol?", peel symbolTest),
                     ("string?", peel stringTest),
                     ("number?", peel numberTest),
